@@ -1,0 +1,23 @@
+# Core API and Agent dependencies
+fastapi[standard]
+guardrails-ai
+langchain
+langchain-openai
+langfuse
+langgraph
+pydantic
+pypdf
+python-dotenv
+pyyaml
+typesafe-sdk
+# Development
+pytest
+# Evaluation and Experiment Tracking
+dagshub
+deepeval
+mlflow
+numpy
+
+# Frontend
+requests
+streamlit
