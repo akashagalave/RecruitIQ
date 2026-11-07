@@ -1,0 +1,7 @@
+Name: Ananya Rao
+Email: ananya.rao@example.com
+Experience: 3 years, Junior Data Scientist at Finlytics
+Skills: Python, SQL, Git, scikit-learn, AWS, Tableau
+Education: B.Sc in Mathematics
+Projects: Built a churn prediction model; trained and tracked it on AWS
+Summary: Data scientist growing into machine learning engineering.

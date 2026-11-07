@@ -1,0 +1,168 @@
+{
+  "name": "LangGraph",
+  "type": "agent",
+  "integration": "LangChain",
+  "available_tools": [],
+  "agent_handoffs": [],
+  "input": {
+    "task": "What are the must-have skills for the Junior ML Engineer role?",
+    "past_steps": []
+  },
+  "output": {
+    "task": "What are the must-have skills for the Junior ML Engineer role?",
+    "plan": [
+      "Call read_file with path='job_description.md'."
+    ],
+    "past_steps": [
+      [
+        "Call read_file with path='job_description.md'.",
+        "I have read the job description for the Junior ML Engineer role. It specifies the must-have skills: Python, SQL, hands-on experience with an ML framework (scikit-learn, PyTorch, or TensorFlow), Git version control, and at least 2 years of work experience. The nice-to-have skills are AWS, Docker, LangChain, MLflow, Spark, and Kubernetes. The scoring rule is that candidates meeting all must-haves are shortlisted with a fit score equal to the number of nice-to-have skills they have. Candidates missing any must-have are rejected with a fit score of 0. I am ready for the next step."
+      ]
+    ],
+    "response": "The must-have skills for the Junior ML Engineer role are Python, SQL, hands-on experience with an ML framework (scikit-learn, PyTorch, or TensorFlow), Git version control, and at least 2 years of work experience. Nice-to-have skills include AWS, Docker, LangChain, MLflow, Spark, and Kubernetes. Candidates missing any must-have skill are rejected."
+  },
+  "children": [
+    {
+      "name": "planner",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "plan": [
+          "Call read_file with path='job_description.md'."
+        ]
+      },
+      "children": [
+        {
+          "name": "RunnableSequence",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "ChatOpenAI",
+              "type": "llm",
+              "integration": "LangChain",
+              "model": "gpt-4o-mini-2024-07-18",
+              "provider": "openai",
+              "input_token_count": 1868.0,
+              "output_token_count": 15.0,
+              "output": "role='AI' content='{\"steps\":[\"Call read_file with path=\\'job_description.md\\'.\"]}' tool_calls=[]",
+              "children": []
+            },
+            {
+              "name": "_check_refusal",
+              "type": "base",
+              "integration": "LangChain",
+              "children": []
+            },
+            {
+              "name": "RunnableLambda",
+              "type": "base",
+              "integration": "LangChain",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "past_steps": [
+          [
+            "Call read_file with path='job_description.md'.",
+            "I have read the job description for the Junior ML Engineer role. It specifies the must-have skills: Python, SQL, hands-on experience with an ML framework (scikit-learn, PyTorch, or TensorFlow), Git version control, and at least 2 years of work experience. The nice-to-have skills are AWS, Docker, LangChain, MLflow, Spark, and Kubernetes. The scoring rule is that candidates meeting all must-haves are shortlisted with a fit score equal to the number of nice-to-have skills they have. Candidates missing any must-have are rejected with a fit score of 0. I am ready for the next step."
+          ]
+        ]
+      },
+      "children": [
+        {
+          "name": "LangGraph",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 785.0,
+                  "output_token_count": 16.0,
+                  "output": "role='AI' content='' tool_calls=[LlmToolCall(name='read_file', args={'path': 'job_description.md'}, id='call_rsOcZktdOdBMboVJSF863Dpz')]",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "tools",
+              "type": "base",
+              "integration": "LangChain",
+              "tools_called": [
+                "name='read_file' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=ToolMessage(content=\"Contents of 'job_description.md':\\n# Role: Junior ML Engineer\\n\\n## Must-have (all required to be shortlisted)\\n- Python\\n- SQL\\n- Hands-on experience with an ML framework (scikit-learn, PyTorch or TensorFlow)\\n- Git version control\\n- At least 2 years of work experience\\n\\n## Nice-to-have (1 point each)\\n- AWS\\n- Docker\\n- LangChain\\n- MLflow\\n- Spark\\n- Kubernetes\\n\\n## Scoring rule\\n- Candidates meeting all must-haves are SHORTLISTED.\\n- Fit score = number of nice-to-have skills (0 to 6).\\n- Candidates missing any must-have are REJECTED with fit score 0.\\n- Screen only on skills and experience listed above.\\n\", name='read_file', id='98d5e6ca-9dab-428d-94b6-80264e310a14', tool_call_id='call_rsOcZktdOdBMboVJSF863Dpz') input_parameters={'path': 'job_description.md'}"
+              ],
+              "children": [
+                {
+                  "name": "read_file",
+                  "type": "tool",
+                  "integration": "LangChain",
+                  "input": {
+                    "path": "job_description.md"
+                  },
+                  "output": "content=\"Contents of 'job_description.md':\\n# Role: Junior ML Engineer\\n\\n## Must-have (all required to be shortlisted)\\n- Python\\n- SQL\\n- Hands-on experience with an ML framework (scikit-learn, PyTorch or TensorFlow)\\n- Git version control\\n- At least 2 years of work experience\\n\\n## Nice-to-have (1 point each)\\n- AWS\\n- Docker\\n- LangChain\\n- MLflow\\n- Spark\\n- Kubernetes\\n\\n## Scoring rule\\n- Candidates meeting all must-haves are SHORTLISTED.\\n- Fit score = number of nice-to-have skills (0 to 6).\\n- Candidates missing any must-have are REJECTED with fit score 0.\\n- Screen only on skills and experience listed above.\\n\" name='read_file' id='98d5e6ca-9dab-428d-94b6-80264e310a14' tool_call_id='call_rsOcZktdOdBMboVJSF863Dpz'",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 962.0,
+                  "output_token_count": 132.0,
+                  "output": "role='AI' content='I have read the job description for the Junior ML Engineer role. It specifies the must-have skills: Python, SQL, hands-on experience with an ML framework (scikit-learn, PyTorch, or TensorFlow), Git version control, and at least 2 years of work experience. The nice-to-have skills are AWS, Docker, LangChain, MLflow, Spark, and Kubernetes. The scoring rule is that candidates meeting all must-haves are shortlisted with a fit score equal to the number of nice-to-have skills they have. Candidates missing any must-have are rejected with a fit score of 0. I am ready for the next step.' tool_calls=[]",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "responder",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "response": "The must-have skills for the Junior ML Engineer role are Python, SQL, hands-on experience with an ML framework (scikit-learn, PyTorch, or TensorFlow), Git version control, and at least 2 years of work experience. Nice-to-have skills include AWS, Docker, LangChain, MLflow, Spark, and Kubernetes. Candidates missing any must-have skill are rejected."
+      },
+      "children": [
+        {
+          "name": "ChatOpenAI",
+          "type": "llm",
+          "integration": "LangChain",
+          "model": "gpt-4.1-mini-2025-04-14",
+          "provider": "openai",
+          "input_token_count": 265.0,
+          "output_token_count": 78.0,
+          "output": "role='AI' content='The must-have skills for the Junior ML Engineer role are Python, SQL, hands-on experience with an ML framework (scikit-learn, PyTorch, or TensorFlow), Git version control, and at least 2 years of work experience. Nice-to-have skills include AWS, Docker, LangChain, MLflow, Spark, and Kubernetes. Candidates missing any must-have skill are rejected.' tool_calls=[]",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_slim": true
+}

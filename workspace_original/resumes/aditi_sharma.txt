@@ -1,0 +1,7 @@
+Name: Aditi Sharma
+Email: aditi.sharma@example.com
+Experience: 5 years, MLOps Engineer at Cortexlabs
+Skills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Spark, Kubernetes
+Education: M.Tech in Artificial Intelligence
+Projects: Built an LLM agent platform with LangChain; ran training on Spark and served models on Kubernetes with Docker; tracked runs in MLflow on AWS
+Summary: MLOps engineer who owns the full path from data to deployed model.

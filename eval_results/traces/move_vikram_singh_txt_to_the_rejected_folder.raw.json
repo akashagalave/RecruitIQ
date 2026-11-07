@@ -1,0 +1,381 @@
+{
+  "name": "LangGraph",
+  "type": "agent",
+  "input": {
+    "task": "Move vikram_singh.txt to the rejected folder",
+    "past_steps": []
+  },
+  "output": {
+    "task": "Move vikram_singh.txt to the rejected folder",
+    "plan": [
+      "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+    ],
+    "past_steps": [
+      [
+        "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'",
+        "I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+      ]
+    ],
+    "response": "I have successfully moved the file vikram_singh.txt to the rejected folder. There were no issues with this task."
+  },
+  "integration": "LangChain",
+  "available_tools": [],
+  "agent_handoffs": [],
+  "children": [
+    {
+      "name": "planner",
+      "type": "base",
+      "input": {
+        "task": "Move vikram_singh.txt to the rejected folder",
+        "past_steps": []
+      },
+      "output": {
+        "plan": [
+          "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+        ]
+      },
+      "integration": "LangChain",
+      "children": [
+        {
+          "name": "RunnableSequence",
+          "type": "base",
+          "input": [
+            [
+              "system",
+              "You are the planner of a hiring assistant. A recruiter gives you ONE task about a\nworkspace of resumes. Write a short, ordered plan; another agent will run each step, one tool call per step.\n\nYou are given a WORKSPACE SNAPSHOT: every file path and the current tracker rows. It does NOT\nshow file contents, so you still cannot know how any candidate will score.\n\nTOOLS:\n- list_files(folder=''): List the files and subfolders directly inside one workspace folder (the workspace root if folder is empty). Subfolders end with '/'. It does not show file contents and does not look inside subfolders.\n- read_file(path): Read the full text of one workspace file, such as a resume, the job description or a draft. It reads one file at a time and does not change anything.\n- add_candidate(name, email, years_experience, must_haves_met, nice_to_haves, fit_score, decision, resume_file, notes=''): Add ONE candidate as a new row in the candidates.csv tracker and return the new candidate_id. must_haves_met is 'yes' or 'no'. nice_to_haves is the matched nice-to-have skills separated by semicolons (empty if none). fit_score is a whole number from 0 to 6. decision is 'shortlisted' or 'rejected'. email is empty if the resume has none. It refuses a candidate whose name is already in the tracker. It does not move the resume file and does not edit existing rows.\n- draft_email(to, subject, body): Save an email draft as a text file in drafts/. It only saves a draft: it never sends an email. It refuses an empty recipient, so do not call it for a candidate who has no email address.\n- update_candidate(candidate_id, field, value): Change ONE field of an existing tracker row, for example update_candidate('C-001', 'decision', 'rejected'). It cannot change the candidate_id and cannot add or delete rows.\n- move_file(source, destination): Move or rename ONE file inside the workspace. If destination is a folder (for example 'shortlisted/'), the file keeps its name. It does not create new folders, does not overwrite an existing file and does not move folders.\n- delete_file(path): Delete ONE file from the workspace. It never deletes folders and cannot be undone.\n\nRULES:\n- Use only filenames that appear in the WORKSPACE SNAPSHOT. Never guess or invent filenames,\n  folders or candidates.\n- For \"all/every/each\" tasks, write the steps for EACH file in the snapshot, one file after the\n  other, using its exact path. The executor cannot loop, so a step like \"for each resume\" will fail.\n- Read job_description.md before screening anyone.\n- The tracker is the file candidates.csv. There is no separate tracker tool: whenever a step needs\n  the tracker (to see who is shortlisted, their emails or scores, or to check for duplicates), add a\n  step \"Call read_file with path='candidates.csv'\" and let later steps use its result. Do this AFTER\n  the add_candidate / update_candidate steps whose results you need, so the file is up to date.\n- Only add to the tracker the candidates the task asks for. Do NOT add_candidate for every resume\n  unless the task says to screen/add everyone. If the task names a criterion (\"everyone with AWS\",\n  \"only the Python developers\"), still read every resume, but write the add_candidate step as\n  conditional: \"If the candidate in step N has <criterion>, call add_candidate ...; otherwise make no\n  tool call and say why\". The same applies to move_file and draft_email steps for those candidates.\n- Ranking or counting questions (\"top 3\", \"how many\") need resume contents. Do NOT add anyone to the\n  tracker just to rank or count: read each resume, ask the executor to state the ATS score in that\n  step's result, and let later steps use it. Add to the tracker only the candidates the task asks to\n  track or shortlist, as conditional steps.\n- Interview invites: you cannot know who will be shortlisted, so after the tracker has been read with\n  read_file on candidates.csv, write one conditional step per candidate, e.g. \"If <name> is shortlisted\n  in the tracker from step N and has an email, call draft_email ...; otherwise make no tool call and\n  say why\".\n- Never decide a candidate's outcome in the plan. Outcomes come from reading the resume and\n  applying the scoring rule, so write conditional steps such as \"move the file to 'shortlisted/'\n  or 'rejected/' based on the decision in step N\".\n- If two filenames look like the same person, read both before deleting one.\n- Screen only on the job description's criteria. Never use age, gender, marital status or\n  anything else the job description does not list.\n- Each step must be ONE concrete action, written as \"Call <tool> with <arguments> ...\".\n  The executor runs one tool call per step and never calls tools in parallel, so never put\n  two actions in one step (for example \"add all candidates\" or \"move both files\"). Write a\n  separate step for each candidate and each file, one after the other.\n- If part of the task needs a tool that does not exist (sending emails, scheduling, calling) or a\n  file that does not exist, add a step that makes no tool call and tells the user what cannot be\n  done and why.\n\nEXAMPLES (on a different, small workspace whose snapshot lists job_description.md,\nresumes/mia_chen.txt and resumes/sam_ortiz.txt):\n\nTask: Which skills does the job description require?\nPlan:\n1. Call read_file with path='job_description.md'.\n\nTask: Screen Mia Chen's resume and add her to the tracker.\nPlan:\n1. Call read_file with path='job_description.md'.\n2. Call read_file with path='resumes/mia_chen.txt'.\n3. Call add_candidate for the candidate in step 2, applying the scoring rule from step 1.\n\nTask: Add every candidate who knows Docker to the tracker.\nPlan:\n1. Call read_file with path='job_description.md'.\n2. Call read_file with path='resumes/mia_chen.txt'.\n3. If the candidate in step 2 has Docker, call add_candidate for them, applying the scoring rule from step 1; otherwise make no tool call and say they do not have Docker.\n4. Call read_file with path='resumes/sam_ortiz.txt'.\n5. If the candidate in step 4 has Docker, call add_candidate for them, applying the scoring rule from step 1; otherwise make no tool call and say they do not have Docker.\n\nTask: Screen all resumes, sort them into shortlisted and rejected, and schedule interviews for the shortlisted.\nPlan:\n1. Call read_file with path='job_description.md'.\n2. Call read_file with path='resumes/mia_chen.txt'.\n3. Call add_candidate for the candidate in step 2, applying the scoring rule from step 1.\n4. Call move_file to move 'resumes/mia_chen.txt' to 'shortlisted/' or 'rejected/' based on the decision in step 3.\n5. Call read_file with path='resumes/sam_ortiz.txt'.\n6. Call add_candidate for the candidate in step 5, applying the scoring rule from step 1.\n7. Call move_file to move 'resumes/sam_ortiz.txt' to 'shortlisted/' or 'rejected/' based on the decision in step 6.\n8. Make no tool call: tell the user that interviews cannot be scheduled because there is no scheduling tool.\n"
+            ],
+            [
+              "human",
+              "WORKSPACE SNAPSHOT:\nFILES:\n  candidates.csv\n  job_description.md\n  drafts/ (empty)\n  rejected/ (empty)\n  resumes/aditi_sharma.txt\n  resumes/ananya_rao.txt\n  resumes/arjun_verma.txt\n  resumes/dev_malhotra.txt\n  resumes/isha_reddy.txt\n  resumes/kabir_khan.txt\n  resumes/karan_shah.txt\n  resumes/meera_joshi.txt\n  resumes/neha_kapoor.txt\n  resumes/priya_nair.txt\n  resumes/rohan_mehta.txt\n  resumes/rohan_mehta_resume_final.txt\n  resumes/sneha_patel.txt\n  resumes/tara_menon.txt\n  resumes/vikram_singh.txt\n  shortlisted/ (empty)\nTRACKER (0 rows):\n\nTASK:\nMove vikram_singh.txt to the rejected folder"
+            ]
+          ],
+          "output": "steps=[\"Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\"]",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "ChatOpenAI",
+              "type": "llm",
+              "input": [
+                {
+                  "role": "system",
+                  "content": "You are the planner of a hiring assistant. A recruiter gives you ONE task about a\nworkspace of resumes. Write a short, ordered plan; another agent will run each step, one tool call per step.\n\nYou are given a WORKSPACE SNAPSHOT: every file path and the current tracker rows. It does NOT\nshow file contents, so you still cannot know how any candidate will score.\n\nTOOLS:\n- list_files(folder=''): List the files and subfolders directly inside one workspace folder (the workspace root if folder is empty). Subfolders end with '/'. It does not show file contents and does not look inside subfolders.\n- read_file(path): Read the full text of one workspace file, such as a resume, the job description or a draft. It reads one file at a time and does not change anything.\n- add_candidate(name, email, years_experience, must_haves_met, nice_to_haves, fit_score, decision, resume_file, notes=''): Add ONE candidate as a new row in the candidates.csv tracker and return the new candidate_id. must_haves_met is 'yes' or 'no'. nice_to_haves is the matched nice-to-have skills separated by semicolons (empty if none). fit_score is a whole number from 0 to 6. decision is 'shortlisted' or 'rejected'. email is empty if the resume has none. It refuses a candidate whose name is already in the tracker. It does not move the resume file and does not edit existing rows.\n- draft_email(to, subject, body): Save an email draft as a text file in drafts/. It only saves a draft: it never sends an email. It refuses an empty recipient, so do not call it for a candidate who has no email address.\n- update_candidate(candidate_id, field, value): Change ONE field of an existing tracker row, for example update_candidate('C-001', 'decision', 'rejected'). It cannot change the candidate_id and cannot add or delete rows.\n- move_file(source, destination): Move or rename ONE file inside the workspace. If destination is a folder (for example 'shortlisted/'), the file keeps its name. It does not create new folders, does not overwrite an existing file and does not move folders.\n- delete_file(path): Delete ONE file from the workspace. It never deletes folders and cannot be undone.\n\nRULES:\n- Use only filenames that appear in the WORKSPACE SNAPSHOT. Never guess or invent filenames,\n  folders or candidates.\n- For \"all/every/each\" tasks, write the steps for EACH file in the snapshot, one file after the\n  other, using its exact path. The executor cannot loop, so a step like \"for each resume\" will fail.\n- Read job_description.md before screening anyone.\n- The tracker is the file candidates.csv. There is no separate tracker tool: whenever a step needs\n  the tracker (to see who is shortlisted, their emails or scores, or to check for duplicates), add a\n  step \"Call read_file with path='candidates.csv'\" and let later steps use its result. Do this AFTER\n  the add_candidate / update_candidate steps whose results you need, so the file is up to date.\n- Only add to the tracker the candidates the task asks for. Do NOT add_candidate for every resume\n  unless the task says to screen/add everyone. If the task names a criterion (\"everyone with AWS\",\n  \"only the Python developers\"), still read every resume, but write the add_candidate step as\n  conditional: \"If the candidate in step N has <criterion>, call add_candidate ...; otherwise make no\n  tool call and say why\". The same applies to move_file and draft_email steps for those candidates.\n- Ranking or counting questions (\"top 3\", \"how many\") need resume contents. Do NOT add anyone to the\n  tracker just to rank or count: read each resume, ask the executor to state the ATS score in that\n  step's result, and let later steps use it. Add to the tracker only the candidates the task asks to\n  track or shortlist, as conditional steps.\n- Interview invites: you cannot know who will be shortlisted, so after the tracker has been read with\n  read_file on candidates.csv, write one conditional step per candidate, e.g. \"If <name> is shortlisted\n  in the tracker from step N and has an email, call draft_email ...; otherwise make no tool call and\n  say why\".\n- Never decide a candidate's outcome in the plan. Outcomes come from reading the resume and\n  applying the scoring rule, so write conditional steps such as \"move the file to 'shortlisted/'\n  or 'rejected/' based on the decision in step N\".\n- If two filenames look like the same person, read both before deleting one.\n- Screen only on the job description's criteria. Never use age, gender, marital status or\n  anything else the job description does not list.\n- Each step must be ONE concrete action, written as \"Call <tool> with <arguments> ...\".\n  The executor runs one tool call per step and never calls tools in parallel, so never put\n  two actions in one step (for example \"add all candidates\" or \"move both files\"). Write a\n  separate step for each candidate and each file, one after the other.\n- If part of the task needs a tool that does not exist (sending emails, scheduling, calling) or a\n  file that does not exist, add a step that makes no tool call and tells the user what cannot be\n  done and why.\n\nEXAMPLES (on a different, small workspace whose snapshot lists job_description.md,\nresumes/mia_chen.txt and resumes/sam_ortiz.txt):\n\nTask: Which skills does the job description require?\nPlan:\n1. Call read_file with path='job_description.md'.\n\nTask: Screen Mia Chen's resume and add her to the tracker.\nPlan:\n1. Call read_file with path='job_description.md'.\n2. Call read_file with path='resumes/mia_chen.txt'.\n3. Call add_candidate for the candidate in step 2, applying the scoring rule from step 1.\n\nTask: Add every candidate who knows Docker to the tracker.\nPlan:\n1. Call read_file with path='job_description.md'.\n2. Call read_file with path='resumes/mia_chen.txt'.\n3. If the candidate in step 2 has Docker, call add_candidate for them, applying the scoring rule from step 1; otherwise make no tool call and say they do not have Docker.\n4. Call read_file with path='resumes/sam_ortiz.txt'.\n5. If the candidate in step 4 has Docker, call add_candidate for them, applying the scoring rule from step 1; otherwise make no tool call and say they do not have Docker.\n\nTask: Screen all resumes, sort them into shortlisted and rejected, and schedule interviews for the shortlisted.\nPlan:\n1. Call read_file with path='job_description.md'.\n2. Call read_file with path='resumes/mia_chen.txt'.\n3. Call add_candidate for the candidate in step 2, applying the scoring rule from step 1.\n4. Call move_file to move 'resumes/mia_chen.txt' to 'shortlisted/' or 'rejected/' based on the decision in step 3.\n5. Call read_file with path='resumes/sam_ortiz.txt'.\n6. Call add_candidate for the candidate in step 5, applying the scoring rule from step 1.\n7. Call move_file to move 'resumes/sam_ortiz.txt' to 'shortlisted/' or 'rejected/' based on the decision in step 6.\n8. Make no tool call: tell the user that interviews cannot be scheduled because there is no scheduling tool.\n"
+                },
+                {
+                  "role": "human",
+                  "content": "WORKSPACE SNAPSHOT:\nFILES:\n  candidates.csv\n  job_description.md\n  drafts/ (empty)\n  rejected/ (empty)\n  resumes/aditi_sharma.txt\n  resumes/ananya_rao.txt\n  resumes/arjun_verma.txt\n  resumes/dev_malhotra.txt\n  resumes/isha_reddy.txt\n  resumes/kabir_khan.txt\n  resumes/karan_shah.txt\n  resumes/meera_joshi.txt\n  resumes/neha_kapoor.txt\n  resumes/priya_nair.txt\n  resumes/rohan_mehta.txt\n  resumes/rohan_mehta_resume_final.txt\n  resumes/sneha_patel.txt\n  resumes/tara_menon.txt\n  resumes/vikram_singh.txt\n  shortlisted/ (empty)\nTRACKER (0 rows):\n\nTASK:\nMove vikram_singh.txt to the rejected folder"
+                }
+              ],
+              "output": "role='AI' content='{\"steps\":[\"Call move_file with source=\\'resumes/vikram_singh.txt\\' and destination=\\'rejected/\\'\"]}' tool_calls=[]",
+              "integration": "LangChain",
+              "model": "gpt-4o-mini-2024-07-18",
+              "provider": "openai",
+              "input_token_count": 1866.0,
+              "output_token_count": 27.0,
+              "children": []
+            },
+            {
+              "name": "_check_refusal",
+              "type": "base",
+              "input": {
+                "input": ""
+              },
+              "output": "content='{\"steps\":[\"Call move_file with source=\\'resumes/vikram_singh.txt\\' and destination=\\'rejected/\\'\"]}' additional_kwargs={'parsed': Plan(steps=[\"Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\"]), 'refusal': None} response_metadata={'token_usage': {'completion_tokens': 27, 'prompt_tokens': 1866, 'total_tokens': 1893, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 1792}}, 'model_provider': 'openai', 'model_name': 'gpt-4o-mini-2024-07-18', 'system_fingerprint': 'fp_291119301d', 'id': 'chatcmpl-EhZed8Jdz3LmL4uDbSWtlKlr3ZKql', 'service_tier': 'default', 'finish_reason': 'stop', 'logprobs': None} id='lc_run--01a1b5f1-87c0-7185-a79f-51b5c64c34b2-0' tool_calls=[] invalid_tool_calls=[] usage_metadata={'input_tokens': 1866, 'output_tokens': 27, 'total_tokens': 1893, 'input_token_details': {'audio': 0, 'cache_read': 1792}, 'output_token_details': {'audio': 0, 'reasoning': 0}}",
+              "integration": "LangChain",
+              "children": []
+            },
+            {
+              "name": "RunnableLambda",
+              "type": "base",
+              "input": "content='{\"steps\":[\"Call move_file with source=\\'resumes/vikram_singh.txt\\' and destination=\\'rejected/\\'\"]}' additional_kwargs={'parsed': Plan(steps=[\"Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\"]), 'refusal': None} response_metadata={'token_usage': {'completion_tokens': 27, 'prompt_tokens': 1866, 'total_tokens': 1893, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 1792}}, 'model_provider': 'openai', 'model_name': 'gpt-4o-mini-2024-07-18', 'system_fingerprint': 'fp_291119301d', 'id': 'chatcmpl-EhZed8Jdz3LmL4uDbSWtlKlr3ZKql', 'service_tier': 'default', 'finish_reason': 'stop', 'logprobs': None} id='lc_run--01a1b5f1-87c0-7185-a79f-51b5c64c34b2-0' tool_calls=[] invalid_tool_calls=[] usage_metadata={'input_tokens': 1866, 'output_tokens': 27, 'total_tokens': 1893, 'input_token_details': {'audio': 0, 'cache_read': 1792}, 'output_token_details': {'audio': 0, 'reasoning': 0}}",
+              "output": "steps=[\"Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\"]",
+              "integration": "LangChain",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "type": "base",
+      "input": {
+        "task": "Move vikram_singh.txt to the rejected folder",
+        "plan": [
+          "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+        ],
+        "past_steps": []
+      },
+      "output": {
+        "past_steps": [
+          [
+            "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'",
+            "I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+          ]
+        ]
+      },
+      "integration": "LangChain",
+      "children": [
+        {
+          "name": "LangGraph",
+          "type": "base",
+          "input": {
+            "messages": [
+              [
+                "human",
+                "COMPLETED STEPS:\n(none yet)\n\nCURRENT STEP:\nCall move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+              ]
+            ]
+          },
+          "output": {
+            "messages": [
+              "content=\"COMPLETED STEPS:\\n(none yet)\\n\\nCURRENT STEP:\\nCall move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\" additional_kwargs={} response_metadata={} id='ed873b9f-bcdb-4329-8e21-8c5d8cbe2695'",
+              "content='' additional_kwargs={'refusal': None} response_metadata={'token_usage': {'completion_tokens': 28, 'prompt_tokens': 797, 'total_tokens': 825, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}}, 'model_provider': 'openai', 'model_name': 'gpt-4.1-mini-2025-04-14', 'system_fingerprint': 'fp_091009f581', 'id': 'chatcmpl-EhZef460ETY2bAWwANrM8NavuagYI', 'service_tier': 'default', 'finish_reason': 'tool_calls', 'logprobs': None} id='lc_run--01a1b5f1-8d07-75c3-af89-650b5fd792b0-0' tool_calls=[{'name': 'move_file', 'args': {'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}, 'id': 'call_ysedjzzrucD42Vki9L25Mgcx', 'type': 'tool_call'}] invalid_tool_calls=[] usage_metadata={'input_tokens': 797, 'output_tokens': 28, 'total_tokens': 825, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}}",
+              "content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\" name='move_file' id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef' tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx'",
+              "content=\"I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'.\" additional_kwargs={'refusal': None} response_metadata={'token_usage': {'completion_tokens': 36, 'prompt_tokens': 857, 'total_tokens': 893, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}}, 'model_provider': 'openai', 'model_name': 'gpt-4.1-mini-2025-04-14', 'system_fingerprint': 'fp_091009f581', 'id': 'chatcmpl-EhZefbbBqGqL2oMgtaawsShIcE0IH', 'service_tier': 'default', 'finish_reason': 'stop', 'logprobs': None} id='lc_run--01a1b5f1-8ff8-71f4-b84c-e632eb2f2697-0' tool_calls=[] invalid_tool_calls=[] usage_metadata={'input_tokens': 857, 'output_tokens': 36, 'total_tokens': 893, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}}"
+            ]
+          },
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "model",
+              "type": "base",
+              "input": {
+                "messages": [
+                  "content=\"COMPLETED STEPS:\\n(none yet)\\n\\nCURRENT STEP:\\nCall move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\" additional_kwargs={} response_metadata={} id='ed873b9f-bcdb-4329-8e21-8c5d8cbe2695'"
+                ]
+              },
+              "output": [
+                "Command(update={'messages': [AIMessage(content='', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 28, 'prompt_tokens': 797, 'total_tokens': 825, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}}, 'model_provider': 'openai', 'model_name': 'gpt-4.1-mini-2025-04-14', 'system_fingerprint': 'fp_091009f581', 'id': 'chatcmpl-EhZef460ETY2bAWwANrM8NavuagYI', 'service_tier': 'default', 'finish_reason': 'tool_calls', 'logprobs': None}, id='lc_run--01a1b5f1-8d07-75c3-af89-650b5fd792b0-0', tool_calls=[{'name': 'move_file', 'args': {'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}, 'id': 'call_ysedjzzrucD42Vki9L25Mgcx', 'type': 'tool_call'}], invalid_tool_calls=[], usage_metadata={'input_tokens': 797, 'output_tokens': 28, 'total_tokens': 825, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}})]})"
+              ],
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "input": [
+                    {
+                      "role": "system",
+                      "content": "You run ONE step of a plan for a hiring assistant, using the tools you have.\n\nRULES:\n- Do exactly the CURRENT STEP. Make at most one tool call, and never call several tools at the\n  same time (calls that run together can overwrite each other's changes to candidates.csv).\n  If the step says to make no tool call, or a condition in it is not met, make no tool call and say why.\n- Follow conditional steps exactly, using COMPLETED STEPS to find the facts they depend on.\n- Copy names, emails, file paths, candidate IDs, scores and decisions EXACTLY as they appear in\n  COMPLETED STEPS or in tool results. Later steps depend on them.\n- Your final message is the ONLY thing later steps will see. State plainly what you did and include\n  every detail a later step may need. When you read a file, copy its full text into your message.\n- If a tool returns an error, report the error text as it is. Do not retry with guesses.\n"
+                    },
+                    {
+                      "role": "human",
+                      "content": "COMPLETED STEPS:\n(none yet)\n\nCURRENT STEP:\nCall move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'list_files', 'description': \"List the files and subfolders directly inside one workspace folder (the\\n    workspace root if folder is empty). Subfolders end with '/'. It does not show\\n    file contents and does not look inside subfolders.\", 'parameters': {'properties': {'folder': {'default': '', 'type': 'string'}}, 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'read_file', 'description': 'Read the full text of one workspace file, such as a resume, the job\\n    description or a draft. It reads one file at a time and does not change anything.', 'parameters': {'properties': {'path': {'type': 'string'}}, 'required': ['path'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'add_candidate', 'description': \"Add ONE candidate as a new row in the candidates.csv tracker and return the\\n    new candidate_id. must_haves_met is 'yes' or 'no'. nice_to_haves is the matched\\n    nice-to-have skills separated by semicolons (empty if none). fit_score is a whole\\n    number from 0 to 6. decision is 'shortlisted' or 'rejected'. email is empty if the\\n    resume has none. It refuses a candidate whose name is already in the tracker.\\n    It does not move the resume file and does not edit existing rows.\", 'parameters': {'properties': {'name': {'type': 'string'}, 'email': {'type': 'string'}, 'years_experience': {'type': 'integer'}, 'must_haves_met': {'type': 'string'}, 'nice_to_haves': {'type': 'string'}, 'fit_score': {'type': 'integer'}, 'decision': {'type': 'string'}, 'resume_file': {'type': 'string'}, 'notes': {'default': '', 'type': 'string'}}, 'required': ['name', 'email', 'years_experience', 'must_haves_met', 'nice_to_haves', 'fit_score', 'decision', 'resume_file'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'draft_email', 'description': 'Save an email draft as a text file in drafts/. It only saves a draft: it\\n    never sends an email. It refuses an empty recipient, so do not call it for a\\n    candidate who has no email address.', 'parameters': {'properties': {'to': {'type': 'string'}, 'subject': {'type': 'string'}, 'body': {'type': 'string'}}, 'required': ['to', 'subject', 'body'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'update_candidate', 'description': \"Change ONE field of an existing tracker row, for example\\n    update_candidate('C-001', 'decision', 'rejected'). It cannot change the\\n    candidate_id and cannot add or delete rows.\", 'parameters': {'properties': {'candidate_id': {'type': 'string'}, 'field': {'type': 'string'}, 'value': {'type': 'string'}}, 'required': ['candidate_id', 'field', 'value'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'move_file', 'description': \"Move or rename ONE file inside the workspace. If destination is a folder\\n    (for example 'shortlisted/'), the file keeps its name. It does not create new\\n    folders, does not overwrite an existing file and does not move folders.\", 'parameters': {'properties': {'source': {'type': 'string'}, 'destination': {'type': 'string'}}, 'required': ['source', 'destination'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'delete_file', 'description': 'Delete ONE file from the workspace. It never deletes folders and cannot be\\n    undone.', 'parameters': {'properties': {'path': {'type': 'string'}}, 'required': ['path'], 'type': 'object'}}}"
+                    }
+                  ],
+                  "output": "role='AI' content='' tool_calls=[LlmToolCall(name='move_file', args={'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}, id='call_ysedjzzrucD42Vki9L25Mgcx')]",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 797.0,
+                  "output_token_count": 28.0,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "tools",
+              "type": "base",
+              "input": [
+                {
+                  "name": "move_file",
+                  "args": {
+                    "source": "resumes/vikram_singh.txt",
+                    "destination": "rejected/"
+                  },
+                  "id": "call_ysedjzzrucD42Vki9L25Mgcx",
+                  "type": "tool_call"
+                }
+              ],
+              "output": {
+                "messages": [
+                  "content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\" name='move_file' id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef' tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx'"
+                ]
+              },
+              "integration": "LangChain",
+              "tools_called": [
+                "name='move_file' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=ToolMessage(content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\", name='move_file', id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef', tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx') input_parameters={'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}"
+              ],
+              "children": [
+                {
+                  "name": "move_file",
+                  "type": "tool",
+                  "input": {
+                    "source": "resumes/vikram_singh.txt",
+                    "destination": "rejected/"
+                  },
+                  "output": "content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\" name='move_file' id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef' tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx'",
+                  "integration": "LangChain",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "model",
+              "type": "base",
+              "input": {
+                "messages": [
+                  "content=\"COMPLETED STEPS:\\n(none yet)\\n\\nCURRENT STEP:\\nCall move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\" additional_kwargs={} response_metadata={} id='ed873b9f-bcdb-4329-8e21-8c5d8cbe2695'",
+                  "content='' additional_kwargs={'refusal': None} response_metadata={'token_usage': {'completion_tokens': 28, 'prompt_tokens': 797, 'total_tokens': 825, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}}, 'model_provider': 'openai', 'model_name': 'gpt-4.1-mini-2025-04-14', 'system_fingerprint': 'fp_091009f581', 'id': 'chatcmpl-EhZef460ETY2bAWwANrM8NavuagYI', 'service_tier': 'default', 'finish_reason': 'tool_calls', 'logprobs': None} id='lc_run--01a1b5f1-8d07-75c3-af89-650b5fd792b0-0' tool_calls=[{'name': 'move_file', 'args': {'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}, 'id': 'call_ysedjzzrucD42Vki9L25Mgcx', 'type': 'tool_call'}] invalid_tool_calls=[] usage_metadata={'input_tokens': 797, 'output_tokens': 28, 'total_tokens': 825, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}}",
+                  "content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\" name='move_file' id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef' tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx'"
+                ]
+              },
+              "output": [
+                "Command(update={'messages': [AIMessage(content=\"I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'.\", additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 36, 'prompt_tokens': 857, 'total_tokens': 893, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'audio_tokens': 0, 'reasoning_tokens': 0, 'rejected_prediction_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': 0, 'cache_write_tokens': None, 'cached_tokens': 0}}, 'model_provider': 'openai', 'model_name': 'gpt-4.1-mini-2025-04-14', 'system_fingerprint': 'fp_091009f581', 'id': 'chatcmpl-EhZefbbBqGqL2oMgtaawsShIcE0IH', 'service_tier': 'default', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--01a1b5f1-8ff8-71f4-b84c-e632eb2f2697-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 857, 'output_tokens': 36, 'total_tokens': 893, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}})]})"
+              ],
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "input": [
+                    {
+                      "role": "system",
+                      "content": "You run ONE step of a plan for a hiring assistant, using the tools you have.\n\nRULES:\n- Do exactly the CURRENT STEP. Make at most one tool call, and never call several tools at the\n  same time (calls that run together can overwrite each other's changes to candidates.csv).\n  If the step says to make no tool call, or a condition in it is not met, make no tool call and say why.\n- Follow conditional steps exactly, using COMPLETED STEPS to find the facts they depend on.\n- Copy names, emails, file paths, candidate IDs, scores and decisions EXACTLY as they appear in\n  COMPLETED STEPS or in tool results. Later steps depend on them.\n- Your final message is the ONLY thing later steps will see. State plainly what you did and include\n  every detail a later step may need. When you read a file, copy its full text into your message.\n- If a tool returns an error, report the error text as it is. Do not retry with guesses.\n"
+                    },
+                    {
+                      "role": "human",
+                      "content": "COMPLETED STEPS:\n(none yet)\n\nCURRENT STEP:\nCall move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+                    },
+                    {
+                      "role": "ai",
+                      "content": ""
+                    },
+                    {
+                      "role": "tool",
+                      "content": "Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'list_files', 'description': \"List the files and subfolders directly inside one workspace folder (the\\n    workspace root if folder is empty). Subfolders end with '/'. It does not show\\n    file contents and does not look inside subfolders.\", 'parameters': {'properties': {'folder': {'default': '', 'type': 'string'}}, 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'read_file', 'description': 'Read the full text of one workspace file, such as a resume, the job\\n    description or a draft. It reads one file at a time and does not change anything.', 'parameters': {'properties': {'path': {'type': 'string'}}, 'required': ['path'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'add_candidate', 'description': \"Add ONE candidate as a new row in the candidates.csv tracker and return the\\n    new candidate_id. must_haves_met is 'yes' or 'no'. nice_to_haves is the matched\\n    nice-to-have skills separated by semicolons (empty if none). fit_score is a whole\\n    number from 0 to 6. decision is 'shortlisted' or 'rejected'. email is empty if the\\n    resume has none. It refuses a candidate whose name is already in the tracker.\\n    It does not move the resume file and does not edit existing rows.\", 'parameters': {'properties': {'name': {'type': 'string'}, 'email': {'type': 'string'}, 'years_experience': {'type': 'integer'}, 'must_haves_met': {'type': 'string'}, 'nice_to_haves': {'type': 'string'}, 'fit_score': {'type': 'integer'}, 'decision': {'type': 'string'}, 'resume_file': {'type': 'string'}, 'notes': {'default': '', 'type': 'string'}}, 'required': ['name', 'email', 'years_experience', 'must_haves_met', 'nice_to_haves', 'fit_score', 'decision', 'resume_file'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'draft_email', 'description': 'Save an email draft as a text file in drafts/. It only saves a draft: it\\n    never sends an email. It refuses an empty recipient, so do not call it for a\\n    candidate who has no email address.', 'parameters': {'properties': {'to': {'type': 'string'}, 'subject': {'type': 'string'}, 'body': {'type': 'string'}}, 'required': ['to', 'subject', 'body'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'update_candidate', 'description': \"Change ONE field of an existing tracker row, for example\\n    update_candidate('C-001', 'decision', 'rejected'). It cannot change the\\n    candidate_id and cannot add or delete rows.\", 'parameters': {'properties': {'candidate_id': {'type': 'string'}, 'field': {'type': 'string'}, 'value': {'type': 'string'}}, 'required': ['candidate_id', 'field', 'value'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'move_file', 'description': \"Move or rename ONE file inside the workspace. If destination is a folder\\n    (for example 'shortlisted/'), the file keeps its name. It does not create new\\n    folders, does not overwrite an existing file and does not move folders.\", 'parameters': {'properties': {'source': {'type': 'string'}, 'destination': {'type': 'string'}}, 'required': ['source', 'destination'], 'type': 'object'}}}"
+                    },
+                    {
+                      "role": "Tool Input",
+                      "content": "{'type': 'function', 'function': {'name': 'delete_file', 'description': 'Delete ONE file from the workspace. It never deletes folders and cannot be\\n    undone.', 'parameters': {'properties': {'path': {'type': 'string'}}, 'required': ['path'], 'type': 'object'}}}"
+                    }
+                  ],
+                  "output": "role='AI' content=\"I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'.\" tool_calls=[]",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 857.0,
+                  "output_token_count": 36.0,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "more_steps",
+          "type": "base",
+          "input": {
+            "task": "Move vikram_singh.txt to the rejected folder",
+            "plan": [
+              "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+            ],
+            "past_steps": [
+              [
+                "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'",
+                "I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+              ]
+            ]
+          },
+          "output": "responder",
+          "integration": "LangChain",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "responder",
+      "type": "base",
+      "input": {
+        "task": "Move vikram_singh.txt to the rejected folder",
+        "plan": [
+          "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+        ],
+        "past_steps": [
+          [
+            "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'",
+            "I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+          ]
+        ]
+      },
+      "output": {
+        "response": "I have successfully moved the file vikram_singh.txt to the rejected folder. There were no issues with this task."
+      },
+      "integration": "LangChain",
+      "children": [
+        {
+          "name": "ChatOpenAI",
+          "type": "llm",
+          "input": [
+            {
+              "role": "system",
+              "content": "You write the final reply of a hiring assistant to a recruiter.\n\nRULES:\n- 2 to 4 sentences, plain language.\n- Give the counts and the exceptions (for example a candidate with no email, or something that\n  could not be done and why).\n- Use ONLY what the step results show. Do not claim anything the results do not confirm.\n- If a step returned an error or was not possible, say so honestly.\n"
+            },
+            {
+              "role": "human",
+              "content": "TASK:\nMove vikram_singh.txt to the rejected folder\n\nSTEP RESULTS:\n1. Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'\n   Result: I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+            }
+          ],
+          "output": "role='AI' content='I have successfully moved the file vikram_singh.txt to the rejected folder. There were no issues with this task.' tool_calls=[]",
+          "integration": "LangChain",
+          "model": "gpt-4.1-mini-2025-04-14",
+          "provider": "openai",
+          "input_token_count": 180.0,
+          "output_token_count": 25.0,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

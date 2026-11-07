@@ -1,0 +1,7 @@
+Name: Kabir Khan
+Email: kabir.khan@example.com
+Experience: 3 years, ML Engineer at Vertex Retail
+Skills: Python, SQL, scikit-learn, AWS
+Education: B.Sc in Statistics
+Projects: Built a product recommendation model with scikit-learn; deployed it on AWS
+Summary: ML engineer focused on recommendation systems.

@@ -1,13 +1,19 @@
+"""One report per eval run: aggregates plus every golden's scores and reasons.
+
+Writes <name>_<date>_<time>.md and .csv to eval_results/reports/.
+Each row is (golden, {metric name: metric object}, final agent state or None).
+"""
 
 import csv
 from datetime import datetime
 
 from hiring_agent.evals.metrics import REPORTS_DIR, THRESHOLD
 
-NO_PLAN_WARNING = "no plans to evaluate" 
+NO_PLAN_WARNING = "no plans to evaluate"  # DeepEval's reason when it finds no plan: a 1.0 that checked nothing
 
 
 def _result(metric) -> dict:
+    """Score, pass flag and reason of one metric, or the error if it did not run."""
     error = getattr(metric, "error", None)
     score = getattr(metric, "score", None)
     if error or score is None:
@@ -24,6 +30,11 @@ def _one_line(text: str) -> str:
 
 
 def print_summary(rows) -> None:
+    """Print every metric (DeepEval's and our custom judges) for every golden to the terminal.
+
+    DeepEval's own table at the end of a run only knows the trace metrics, so this
+    is where Plan Quality and Plan Adherence become visible without opening the report.
+    """
     print("\n" + "=" * 80 + "\nALL METRICS\n" + "=" * 80)
     for i, (golden, metrics, _) in enumerate(rows, 1):
         print(f"\n[{i}] {golden.input}")
@@ -31,6 +42,21 @@ def print_summary(rows) -> None:
             r = _result(metric)
             print(f"  {metric_name:<32} {_cell(r)}")
             print(f"      {_one_line(r['reason'])}")
+
+
+def _averages(results) -> dict[str, float]:
+    """Average score per metric over the goldens that got a score (errors are skipped)."""
+    averages = {}
+    for m in results[0][1]:
+        scored = [r[m]["score"] for _, r, _ in results if r[m]["score"] is not None]
+        averages[m] = sum(scored) / len(scored) if scored else float("nan")
+    return averages
+
+
+def metric_averages(rows) -> dict[str, float]:
+    """Average score per metric for a run: the same numbers as the report's Aggregate table."""
+    results = [(golden, {m: _result(obj) for m, obj in metrics.items()}, state) for golden, metrics, state in rows]
+    return _averages(results)
 
 
 def write_report(rows, name: str, meta: dict) -> str:
@@ -46,10 +72,10 @@ def write_report(rows, name: str, meta: dict) -> str:
     md += [f"- **Goldens:** {len(results)}", f"- **Pass threshold:** {THRESHOLD}", ""]
 
     md += ["## Aggregate", "", "| Metric | Average score | Passed |", "|---|---|---|"]
+    averages = _averages(results)
     for m in metric_names:
-        scored = [r[m] for _, r, _ in results if r[m]["score"] is not None]
-        avg = sum(x["score"] for x in scored) / len(scored) if scored else float("nan")
-        md.append(f"| {m} | {avg:.2f} | {sum(x['passed'] for x in scored)}/{len(results)} |")
+        passed = sum(r[m]["passed"] for _, r, _ in results)
+        md.append(f"| {m} | {averages[m]:.2f} | {passed}/{len(results)} |")
 
     md += ["", "### Pass rate by difficulty", "", "| Difficulty | " + " | ".join(metric_names) + " |",
            "|---|" + "---|" * len(metric_names)]
@@ -81,6 +107,7 @@ def write_report(rows, name: str, meta: dict) -> str:
     md_path = REPORTS_DIR / f"{name}_{stamp}.md"
     md_path.write_text("\n".join(md))
 
+    # ---- csv: one row per golden ----
     header = ["#", "difficulty", "type", "task"] + [f"{m} {col}" for m in metric_names for col in ("score", "passed", "reason")]
     with open(md_path.with_suffix(".csv"), "w", newline="") as f:
         writer = csv.writer(f)

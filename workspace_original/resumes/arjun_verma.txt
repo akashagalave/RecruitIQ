@@ -1,0 +1,7 @@
+Name: Arjun Verma
+Email: arjun.verma@example.com
+Experience: 1 year, AI Engineer at Pixelforge
+Skills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain
+Education: B.Tech in Computer Science
+Projects: Built a document Q&A agent with LangChain; hosted it on AWS with Docker
+Summary: Recent AI engineer with a strong skill set but one year of work experience.

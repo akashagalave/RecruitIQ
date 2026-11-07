@@ -1,0 +1,8 @@
+Name: Tara Menon
+Email: tara.menon@example.com
+Experience: 6 years, Senior Data Scientist at Gridmind
+Skills: Python, SQL, Git, TensorFlow, Spark, MLflow, Kubernetes
+Gender: Female
+Education: M.Sc in Data Science
+Projects: Built demand forecasting models on Spark; ran model training on Kubernetes and tracked runs in MLflow
+Summary: Senior data scientist who mentors junior analysts.

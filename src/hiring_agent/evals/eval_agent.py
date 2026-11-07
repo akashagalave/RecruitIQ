@@ -24,7 +24,7 @@ from hiring_agent.evals.metrics import (
 from hiring_agent.evals.plan_judge import plan_test_case
 from hiring_agent.evals.report import print_summary, write_report
 from hiring_agent.evals.tool_calls import ToolCallRecorder, clean_tool_calls
-from hiring_agent.app import clients
+from hiring_agent.app.clients import agent_params
 from hiring_agent.app.agent import build_agent, run_agent
 from hiring_agent.app.prompts import EXECUTOR_PROMPT_NAME, PLANNER_PROMPT_NAME, RESPONDER_PROMPT_NAME, load_prompt
 from hiring_agent.app.workspace import ROOT_DIR, reset_workspace, workspace_snapshot
@@ -44,23 +44,25 @@ def load_goldens(only: list[int] | None):
 def run_metadata() -> dict:
     prompts = ", ".join(f"{n.split('_')[2]} v{load_prompt(n).version}" for n in (PLANNER_PROMPT_NAME, EXECUTOR_PROMPT_NAME, RESPONDER_PROMPT_NAME))
     return {
-        "Planner model": clients.PLANNER_MODEL,
-        "Executor / responder model": clients.EXECUTOR_MODEL,
+        "Planner model": agent_params.planner_model,
+        "Executor model": agent_params.executor_model,
+        "Responder model": agent_params.responder_model,
         "Judge model": JUDGE_MODEL,
         "Langfuse prompts": prompts,
     }
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--only", type=int, nargs="+", help="run only these golden numbers (1-based)")
-    args = parser.parse_args()
+def run_eval(only: list[int] | None = None) -> tuple[list, str | None]:
+    """Run the agent and every metric on the goldens, write the report.
 
-    dataset = load_goldens(args.only)
+    Returns (rows, report markdown path). The experiment pipeline calls this too.
+    """
+    dataset = load_goldens(only)
     agent = build_agent()
     meta = run_metadata()
 
     rows = []  # (golden, {metric name: metric}, final state); scores are filled in by DeepEval
+    report_path = None
     try:
         for golden in dataset.evals_iterator(
             async_config=AsyncConfig(run_async=False),  # one golden at a time: they share one workspace/
@@ -98,6 +100,17 @@ if __name__ == "__main__":
                 except Exception as e:  # show it in the report instead of crashing the run
                     judge.error = f"{type(e).__name__}: {e}"
     finally:
+        # always write the report, even if the run crashed or was stopped
         if rows:
             print_summary(rows)
-            print("\nReport:", write_report(rows, "agent_eval", meta))
+            report_path = write_report(rows, "agent_eval", meta)
+            print("\nReport:", report_path)
+    return rows, report_path
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--only", type=int, nargs="+", help="run only these golden numbers (1-based)")
+    args = parser.parse_args()
+
+    run_eval(args.only)

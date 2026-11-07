@@ -1,0 +1,7 @@
+Name: Rohan Mehta
+Email: rohan.mehta@example.com
+Experience: 4 years, ML Engineer at Datawave
+Skills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes
+Education: B.Tech in Computer Science
+Projects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow
+Summary: ML engineer who ships models from notebook to production.

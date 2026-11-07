@@ -1,0 +1,7 @@
+Name: Isha Reddy
+Email: isha.reddy@example.com
+Experience: 2 years, AI Engineer at Lumina AI
+Skills: Python, SQL, Git, PyTorch, LangChain, Docker
+Education: B.E in Computer Science
+Projects: Built a support-ticket classifier in PyTorch; prototyped a LangChain assistant and shipped it in a Docker image
+Summary: AI engineer who likes turning prototypes into small services.

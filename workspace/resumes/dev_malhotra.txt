@@ -1,0 +1,7 @@
+Name: Dev Malhotra
+Email: dev.malhotra@example.com
+Experience: 3 years, Data Scientist at Quantiva
+Skills: Python, SQL, Git, scikit-learn, AWS, Docker, MLflow
+Education: B.Tech in Mathematics and Computing
+Projects: Built a fraud detection model; packaged it with Docker and tracked experiments in MLflow on AWS
+Summary: Data scientist who cares about reproducible experiments.

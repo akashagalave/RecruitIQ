@@ -1,0 +1,8 @@
+Name: Priya Nair
+Email: priya.nair@example.com
+Experience: 5 years, Data Scientist at Brightpath
+Skills: Python, SQL, Git, scikit-learn, Docker, LangChain, MLflow, Spark
+Education: M.Sc in Statistics
+Marital status: Married, two children
+Projects: Built an LLM summariser with LangChain; containerised training pipelines with Docker; built Spark feature pipelines and tracked runs in MLflow
+Summary: Data scientist who turns messy data into working ML products.

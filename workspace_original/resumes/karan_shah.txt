@@ -1,0 +1,8 @@
+Name: Karan Shah
+Email: not provided
+Experience: 2 years, Machine Learning Analyst at Orbit Retail
+Skills: Python, SQL, Git, scikit-learn, Excel
+Age: 52
+Education: B.Com with a data science diploma
+Projects: Built a demand forecasting model; wrote SQL pipelines for model features
+Summary: ML analyst with steady Python and SQL experience.

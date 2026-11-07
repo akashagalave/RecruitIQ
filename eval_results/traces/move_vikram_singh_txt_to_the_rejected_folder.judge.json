@@ -1,0 +1,169 @@
+{
+  "name": "LangGraph",
+  "type": "agent",
+  "integration": "LangChain",
+  "available_tools": [],
+  "agent_handoffs": [],
+  "input": {
+    "task": "Move vikram_singh.txt to the rejected folder",
+    "past_steps": []
+  },
+  "output": {
+    "task": "Move vikram_singh.txt to the rejected folder",
+    "plan": [
+      "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+    ],
+    "past_steps": [
+      [
+        "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'",
+        "I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+      ]
+    ],
+    "response": "I have successfully moved the file vikram_singh.txt to the rejected folder. There were no issues with this task."
+  },
+  "children": [
+    {
+      "name": "planner",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "plan": [
+          "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'"
+        ]
+      },
+      "children": [
+        {
+          "name": "RunnableSequence",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "ChatOpenAI",
+              "type": "llm",
+              "integration": "LangChain",
+              "model": "gpt-4o-mini-2024-07-18",
+              "provider": "openai",
+              "input_token_count": 1866.0,
+              "output_token_count": 27.0,
+              "output": "role='AI' content='{\"steps\":[\"Call move_file with source=\\'resumes/vikram_singh.txt\\' and destination=\\'rejected/\\'\"]}' tool_calls=[]",
+              "children": []
+            },
+            {
+              "name": "_check_refusal",
+              "type": "base",
+              "integration": "LangChain",
+              "children": []
+            },
+            {
+              "name": "RunnableLambda",
+              "type": "base",
+              "integration": "LangChain",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "past_steps": [
+          [
+            "Call move_file with source='resumes/vikram_singh.txt' and destination='rejected/'",
+            "I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'."
+          ]
+        ]
+      },
+      "children": [
+        {
+          "name": "LangGraph",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 797.0,
+                  "output_token_count": 28.0,
+                  "output": "role='AI' content='' tool_calls=[LlmToolCall(name='move_file', args={'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}, id='call_ysedjzzrucD42Vki9L25Mgcx')]",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "tools",
+              "type": "base",
+              "integration": "LangChain",
+              "tools_called": [
+                "name='move_file' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=ToolMessage(content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\", name='move_file', id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef', tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx') input_parameters={'source': 'resumes/vikram_singh.txt', 'destination': 'rejected/'}"
+              ],
+              "children": [
+                {
+                  "name": "move_file",
+                  "type": "tool",
+                  "integration": "LangChain",
+                  "input": {
+                    "source": "resumes/vikram_singh.txt",
+                    "destination": "rejected/"
+                  },
+                  "output": "content=\"Moved 'resumes/vikram_singh.txt' to 'rejected/vikram_singh.txt'\" name='move_file' id='37b9d5b4-bf86-49aa-9f6e-cf9536677cef' tool_call_id='call_ysedjzzrucD42Vki9L25Mgcx'",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 857.0,
+                  "output_token_count": 36.0,
+                  "output": "role='AI' content=\"I have moved the file 'resumes/vikram_singh.txt' to the folder 'rejected/' as 'rejected/vikram_singh.txt'.\" tool_calls=[]",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "responder",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "response": "I have successfully moved the file vikram_singh.txt to the rejected folder. There were no issues with this task."
+      },
+      "children": [
+        {
+          "name": "ChatOpenAI",
+          "type": "llm",
+          "integration": "LangChain",
+          "model": "gpt-4.1-mini-2025-04-14",
+          "provider": "openai",
+          "input_token_count": 180.0,
+          "output_token_count": 25.0,
+          "output": "role='AI' content='I have successfully moved the file vikram_singh.txt to the rejected folder. There were no issues with this task.' tool_calls=[]",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_slim": true
+}

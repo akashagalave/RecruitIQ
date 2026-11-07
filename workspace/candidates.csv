@@ -1,0 +1,3 @@
+candidate_id,name,email,years_experience,must_haves_met,nice_to_haves,fit_score,decision,resume_file,notes
+C-001,Vikram Singh,,4,yes,Git;PyTorch;AWS;Docker,5,shortlisted,resumes/vikram_singh.txt,
+C-002,Karan Shah,,2,no,Python;SQL;Git,3,rejected,resumes/karan_shah.txt,

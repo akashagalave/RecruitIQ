@@ -1,0 +1,7 @@
+Name: Meera Joshi
+Email: meera.joshi@example.com
+Experience: 4 years, Data Engineer at Nimbus Analytics
+Skills: Python, SQL, Git, AWS, Docker, Airflow
+Education: B.Tech in Information Technology
+Projects: Built data pipelines for model training; containerised the jobs with Docker on AWS
+Summary: Data engineer who prepares the data that ML teams train on.

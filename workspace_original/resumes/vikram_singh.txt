@@ -1,0 +1,7 @@
+Name: Vikram Singh
+Email: vikram.singh@example.com
+Experience: 4 years, AI Engineer at Cloudnine
+Skills: Python, Git, PyTorch, AWS, Docker
+Education: B.Tech in Electronics
+Projects: Built a speech recognition model; deployed it on AWS with Docker
+Summary: AI engineer focused on deep learning and model serving.

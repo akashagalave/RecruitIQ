@@ -1,0 +1,336 @@
+{
+  "name": "LangGraph",
+  "type": "agent",
+  "integration": "LangChain",
+  "available_tools": [],
+  "agent_handoffs": [],
+  "input": {
+    "task": "Find and delete any duplicate resumes",
+    "past_steps": []
+  },
+  "output": {
+    "task": "Find and delete any duplicate resumes",
+    "plan": [
+      "Call read_file with path='resumes/rohan_mehta.txt'.",
+      "Call read_file with path='resumes/rohan_mehta_resume_final.txt'.",
+      "If the candidate in step 1 and step 2 are duplicates, call delete_file with path='resumes/rohan_mehta.txt'."
+    ],
+    "past_steps": [
+      [
+        "Call read_file with path='resumes/rohan_mehta.txt'.",
+        "I have read the resume of Rohan Mehta from 'resumes/rohan_mehta.txt'. The resume details are:\n\nName: Rohan Mehta\nEmail: rohan.mehta@example.com\nExperience: 4 years, ML Engineer at Datawave\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\nEducation: B.Tech in Computer Science\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\nSummary: ML engineer who ships models from notebook to production.\n\nThis completes the current step."
+      ],
+      [
+        "Call read_file with path='resumes/rohan_mehta_resume_final.txt'.",
+        "I have read the resume of Rohan Mehta from 'resumes/rohan_mehta_resume_final.txt'. The resume details are:\n\nName: Rohan Mehta\nEmail: rohan.mehta@example.com\nExperience: 4 years, ML Engineer at Datawave\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\nEducation: B.Tech in Computer Science\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\nSummary: ML engineer who ships models from notebook to production. (final version)"
+      ],
+      [
+        "If the candidate in step 1 and step 2 are duplicates, call delete_file with path='resumes/rohan_mehta.txt'.",
+        "The candidate in step 1 and step 2 are duplicates (both are Rohan Mehta with the same details). I deleted the file 'resumes/rohan_mehta.txt' as it is a duplicate and kept the final version 'resumes/rohan_mehta_resume_final.txt'."
+      ]
+    ],
+    "response": "There were 2 resumes for Rohan Mehta, which were duplicates with the same details. I deleted the older file 'resumes/rohan_mehta.txt' and kept the final version 'resumes/rohan_mehta_resume_final.txt'. No issues occurred during this process."
+  },
+  "children": [
+    {
+      "name": "planner",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "plan": [
+          "Call read_file with path='resumes/rohan_mehta.txt'.",
+          "Call read_file with path='resumes/rohan_mehta_resume_final.txt'.",
+          "If the candidate in step 1 and step 2 are duplicates, call delete_file with path='resumes/rohan_mehta.txt'."
+        ]
+      },
+      "children": [
+        {
+          "name": "RunnableSequence",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "ChatOpenAI",
+              "type": "llm",
+              "integration": "LangChain",
+              "model": "gpt-4o-mini-2024-07-18",
+              "provider": "openai",
+              "input_token_count": 1861.0,
+              "output_token_count": 68.0,
+              "output": "role='AI' content='{\"steps\":[\"Call read_file with path=\\'resumes/rohan_mehta.txt\\'.\",\"Call read_file with path=\\'resumes/rohan_mehta_resume_final.txt\\'.\",\"If the candidate in step 1 and step 2 are duplicates, call delete_file with path=\\'resumes/rohan_mehta.txt\\'.\"]}' tool_calls=[]",
+              "children": []
+            },
+            {
+              "name": "_check_refusal",
+              "type": "base",
+              "integration": "LangChain",
+              "children": []
+            },
+            {
+              "name": "RunnableLambda",
+              "type": "base",
+              "integration": "LangChain",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "past_steps": [
+          [
+            "Call read_file with path='resumes/rohan_mehta.txt'.",
+            "I have read the resume of Rohan Mehta from 'resumes/rohan_mehta.txt'. The resume details are:\n\nName: Rohan Mehta\nEmail: rohan.mehta@example.com\nExperience: 4 years, ML Engineer at Datawave\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\nEducation: B.Tech in Computer Science\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\nSummary: ML engineer who ships models from notebook to production.\n\nThis completes the current step."
+          ]
+        ]
+      },
+      "children": [
+        {
+          "name": "LangGraph",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 790.0,
+                  "output_token_count": 21.0,
+                  "output": "role='AI' content='' tool_calls=[LlmToolCall(name='read_file', args={'path': 'resumes/rohan_mehta.txt'}, id='call_y4ccqzlZxqvQcH0VIvtMPSSC')]",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "tools",
+              "type": "base",
+              "integration": "LangChain",
+              "tools_called": [
+                "name='read_file' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=ToolMessage(content=\"Contents of 'resumes/rohan_mehta.txt':\\nName: Rohan Mehta\\nEmail: rohan.mehta@example.com\\nExperience: 4 years, ML Engineer at Datawave\\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\\nEducation: B.Tech in Computer Science\\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\\nSummary: ML engineer who ships models from notebook to production.\\n\", name='read_file', id='1f4b70f2-5b9c-49f6-9c24-7bd4b3d750a3', tool_call_id='call_y4ccqzlZxqvQcH0VIvtMPSSC') input_parameters={'path': 'resumes/rohan_mehta.txt'}"
+              ],
+              "children": [
+                {
+                  "name": "read_file",
+                  "type": "tool",
+                  "integration": "LangChain",
+                  "input": {
+                    "path": "resumes/rohan_mehta.txt"
+                  },
+                  "output": "content=\"Contents of 'resumes/rohan_mehta.txt':\\nName: Rohan Mehta\\nEmail: rohan.mehta@example.com\\nExperience: 4 years, ML Engineer at Datawave\\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\\nEducation: B.Tech in Computer Science\\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\\nSummary: ML engineer who ships models from notebook to production.\\n\" name='read_file' id='1f4b70f2-5b9c-49f6-9c24-7bd4b3d750a3' tool_call_id='call_y4ccqzlZxqvQcH0VIvtMPSSC'",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 929.0,
+                  "output_token_count": 131.0,
+                  "output": "role='AI' content=\"I have read the resume of Rohan Mehta from 'resumes/rohan_mehta.txt'. The resume details are:\\n\\nName: Rohan Mehta\\nEmail: rohan.mehta@example.com\\nExperience: 4 years, ML Engineer at Datawave\\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\\nEducation: B.Tech in Computer Science\\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\\nSummary: ML engineer who ships models from notebook to production.\\n\\nThis completes the current step.\" tool_calls=[]",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "past_steps": [
+          [
+            "Call read_file with path='resumes/rohan_mehta_resume_final.txt'.",
+            "I have read the resume of Rohan Mehta from 'resumes/rohan_mehta_resume_final.txt'. The resume details are:\n\nName: Rohan Mehta\nEmail: rohan.mehta@example.com\nExperience: 4 years, ML Engineer at Datawave\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\nEducation: B.Tech in Computer Science\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\nSummary: ML engineer who ships models from notebook to production. (final version)"
+          ]
+        ]
+      },
+      "children": [
+        {
+          "name": "LangGraph",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 938.0,
+                  "output_token_count": 23.0,
+                  "output": "role='AI' content='' tool_calls=[LlmToolCall(name='read_file', args={'path': 'resumes/rohan_mehta_resume_final.txt'}, id='call_bUzEjmB3YfGbvgfu0RkUJznK')]",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "tools",
+              "type": "base",
+              "integration": "LangChain",
+              "tools_called": [
+                "name='read_file' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=ToolMessage(content=\"Contents of 'resumes/rohan_mehta_resume_final.txt':\\nName: Rohan Mehta\\nEmail: rohan.mehta@example.com\\nExperience: 4 years, ML Engineer at Datawave\\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\\nEducation: B.Tech in Computer Science\\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\\nSummary: ML engineer who ships models from notebook to production. (final version)\\n\", name='read_file', id='933c0ab8-60b6-46ca-867a-a85589c28bb0', tool_call_id='call_bUzEjmB3YfGbvgfu0RkUJznK') input_parameters={'path': 'resumes/rohan_mehta_resume_final.txt'}"
+              ],
+              "children": [
+                {
+                  "name": "read_file",
+                  "type": "tool",
+                  "integration": "LangChain",
+                  "input": {
+                    "path": "resumes/rohan_mehta_resume_final.txt"
+                  },
+                  "output": "content=\"Contents of 'resumes/rohan_mehta_resume_final.txt':\\nName: Rohan Mehta\\nEmail: rohan.mehta@example.com\\nExperience: 4 years, ML Engineer at Datawave\\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\\nEducation: B.Tech in Computer Science\\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\\nSummary: ML engineer who ships models from notebook to production. (final version)\\n\" name='read_file' id='933c0ab8-60b6-46ca-867a-a85589c28bb0' tool_call_id='call_bUzEjmB3YfGbvgfu0RkUJznK'",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 1085.0,
+                  "output_token_count": 131.0,
+                  "output": "role='AI' content=\"I have read the resume of Rohan Mehta from 'resumes/rohan_mehta_resume_final.txt'. The resume details are:\\n\\nName: Rohan Mehta\\nEmail: rohan.mehta@example.com\\nExperience: 4 years, ML Engineer at Datawave\\nSkills: Python, SQL, Git, PyTorch, AWS, Docker, LangChain, MLflow, Kubernetes\\nEducation: B.Tech in Computer Science\\nProjects: Built a RAG chatbot with LangChain; deployed ML models on AWS with Docker and Kubernetes; tracked experiments in MLflow\\nSummary: ML engineer who ships models from notebook to production. (final version)\" tool_calls=[]",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "executor",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "past_steps": [
+          [
+            "If the candidate in step 1 and step 2 are duplicates, call delete_file with path='resumes/rohan_mehta.txt'.",
+            "The candidate in step 1 and step 2 are duplicates (both are Rohan Mehta with the same details). I deleted the file 'resumes/rohan_mehta.txt' as it is a duplicate and kept the final version 'resumes/rohan_mehta_resume_final.txt'."
+          ]
+        ]
+      },
+      "children": [
+        {
+          "name": "LangGraph",
+          "type": "base",
+          "integration": "LangChain",
+          "children": [
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 1102.0,
+                  "output_token_count": 21.0,
+                  "output": "role='AI' content='' tool_calls=[LlmToolCall(name='delete_file', args={'path': 'resumes/rohan_mehta.txt'}, id='call_zbB7zpKgvo44T5fFHbqZx3jB')]",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "tools",
+              "type": "base",
+              "integration": "LangChain",
+              "tools_called": [
+                "name='delete_file' type=<ToolCallType.FUNCTION: 'FUNCTION'> description=None reasoning=None output=ToolMessage(content=\"Deleted 'resumes/rohan_mehta.txt'\", name='delete_file', id='c8049e29-cbd0-4fa3-9698-5992b9803a35', tool_call_id='call_zbB7zpKgvo44T5fFHbqZx3jB') input_parameters={'path': 'resumes/rohan_mehta.txt'}"
+              ],
+              "children": [
+                {
+                  "name": "delete_file",
+                  "type": "tool",
+                  "integration": "LangChain",
+                  "input": {
+                    "path": "resumes/rohan_mehta.txt"
+                  },
+                  "output": "content=\"Deleted 'resumes/rohan_mehta.txt'\" name='delete_file' id='c8049e29-cbd0-4fa3-9698-5992b9803a35' tool_call_id='call_zbB7zpKgvo44T5fFHbqZx3jB'",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "model",
+              "type": "base",
+              "integration": "LangChain",
+              "children": [
+                {
+                  "name": "ChatOpenAI",
+                  "type": "llm",
+                  "integration": "LangChain",
+                  "model": "gpt-4.1-mini-2025-04-14",
+                  "provider": "openai",
+                  "input_token_count": 1142.0,
+                  "output_token_count": 61.0,
+                  "output": "role='AI' content=\"The candidate in step 1 and step 2 are duplicates (both are Rohan Mehta with the same details). I deleted the file 'resumes/rohan_mehta.txt' as it is a duplicate and kept the final version 'resumes/rohan_mehta_resume_final.txt'.\" tool_calls=[]",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "responder",
+      "type": "base",
+      "integration": "LangChain",
+      "output": {
+        "response": "There were 2 resumes for Rohan Mehta, which were duplicates with the same details. I deleted the older file 'resumes/rohan_mehta.txt' and kept the final version 'resumes/rohan_mehta_resume_final.txt'. No issues occurred during this process."
+      },
+      "children": [
+        {
+          "name": "ChatOpenAI",
+          "type": "llm",
+          "integration": "LangChain",
+          "model": "gpt-4.1-mini-2025-04-14",
+          "provider": "openai",
+          "input_token_count": 509.0,
+          "output_token_count": 58.0,
+          "output": "role='AI' content=\"There were 2 resumes for Rohan Mehta, which were duplicates with the same details. I deleted the older file 'resumes/rohan_mehta.txt' and kept the final version 'resumes/rohan_mehta_resume_final.txt'. No issues occurred during this process.\" tool_calls=[]",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "_slim": true
+}

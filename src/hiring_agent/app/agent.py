@@ -33,7 +33,7 @@ from hiring_agent.app.tools import TOOL_LIST, TOOLS
 from hiring_agent.app.workspace import workspace_snapshot
 
 # a full screening run is ~30 executor visits, so give the graph plenty of room
-RECURSION_LIMIT = 31
+RECURSION_LIMIT = 70
 
 # The message each node sends with its run-time data. These are not versioned in Langfuse:
 # they only carry values, the behaviour comes from the system prompts.
@@ -73,8 +73,8 @@ def build_agent(llm=None, planner_llm=None):
 
     # system prompts from Langfuse; only the planner's has a variable (the tool list)
     planner_system = load_prompt(PLANNER_PROMPT_NAME).compile(tool_list=TOOL_LIST)
-    executor_system = load_prompt(EXECUTOR_PROMPT_NAME)
-    responder_system = load_prompt(RESPONDER_PROMPT_NAME)
+    executor_system = load_prompt(EXECUTOR_PROMPT_NAME).compile()
+    responder_system = load_prompt(RESPONDER_PROMPT_NAME).compile()
 
     # the sub-agent that runs a single step: model <-> tools loop
     step_executor = create_agent(llm, TOOLS, system_prompt=executor_system)

@@ -1,0 +1,7 @@
+Name: Sneha Patel
+Email: sneha.patel@example.com
+Experience: 2 years, AI Engineer at Streamline
+Skills: Python, SQL, Git, TensorFlow, Docker
+Education: B.E in Information Technology
+Projects: Built an image classification service; packaged the model with Docker
+Summary: AI engineer interested in production ML pipelines.

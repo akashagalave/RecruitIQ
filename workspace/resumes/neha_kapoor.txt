@@ -1,0 +1,7 @@
+Name: Neha Kapoor
+Email: neha.kapoor@example.com
+Experience: 3 years, Data Scientist at Marketly
+Skills: SQL, Git, R, TensorFlow, AWS, Tableau
+Education: BBA in Analytics
+Projects: Built a churn model with TensorFlow in R; ran A/B test analysis on AWS
+Summary: Data scientist with strong SQL and statistics skills.
