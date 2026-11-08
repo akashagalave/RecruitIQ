@@ -1,16 +1,3 @@
-"""Plan-and-execute hiring agent.
-
-    START -> planner -> executor --(steps left?)--> executor ...
-                                \\--(all done)-----> responder -> END
-
-planner:   one LLM call that writes the plan (it sees the task, the tool list and a
-           workspace snapshot of file paths + tracker rows, never file contents)
-executor:  runs ONE plan step per visit with a small tool-calling sub-agent
-responder: writes the final answer from the step results
-
-The three system prompts are not in this file: they are loaded from Langfuse
-(label "latest") by prompts.load_prompt().
-"""
 
 import operator
 from typing import Annotated, TypedDict

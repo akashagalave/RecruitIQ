@@ -1,9 +1,19 @@
+"""Streamlit frontend: the workspace view plus the agent panel.
+
+Stage 6: the app no longer imports the agent. Every workspace read, upload, clear and
+agent run is an HTTP request to the FastAPI backend (api_client.py). The backend works
+on workspace_app/; the seeded workspace/ is left to the CLI and the evals.
+
+Run from the repo root, in two terminals:
+    uv run uvicorn hiring_agent.api.main:app --reload
+    uv run streamlit run src/hiring_agent/frontend/agent_app.py
+"""
 
 import pandas as pd
+import requests
 import streamlit as st
 
-from hiring_agent.app import workspace
-from hiring_agent.app.agent import build_agent, run_agent
+from hiring_agent.frontend import api_client
 
 st.set_page_config(
     page_title="Hiring assistant",
@@ -11,10 +21,11 @@ st.set_page_config(
     layout="wide",
 )
 
+JD_FILE = "job_description.md"
 BOX_HEIGHT = 560
 DRAFTS_HEIGHT = 260
 
-
+# Folders shown as KPI cards, in the order a run fills them.
 KPI_FOLDERS = [
     ("resumes", "Resumes to screen", ":material/description:"),
     ("shortlisted", "Shortlisted", ":material/check_circle:"),
@@ -22,6 +33,7 @@ KPI_FOLDERS = [
     ("drafts", "Email drafts", ":material/mail:"),
 ]
 
+# Folders whose files can be previewed in the Resumes box, with a badge per folder.
 RESUME_FOLDERS = {
     "resumes": "",
     "shortlisted": ":green-badge[shortlisted]",
@@ -29,41 +41,72 @@ RESUME_FOLDERS = {
 }
 
 
-@st.cache_resource
-def get_agent():
-    return build_agent()
+# Glow colours of the health button once it has been clicked (white until then)
+HEALTH_COLOURS = {"healthy": "#21c354", "unhealthy": "#ff4b4b"}
 
 
-def take_snapshot() -> dict:
-    files = {path for paths in workspace.file_tree().values() for path in paths}
-    tracker_ids = {row["candidate_id"] for row in workspace.read_tracker()}
-    return {"files": files, "tracker_ids": tracker_ids}
+# --------------------------------------------------------------------------
+# API health (sidebar): one button for both OpenAI and Jev
+# --------------------------------------------------------------------------
+
+def render_dot(status: str | None) -> str:
+    """Same dots as the RAG app: white before the first check, then green or red."""
+    if status == "healthy":
+        return "🟢"
+    if status == "unhealthy":
+        return "🔴"
+    return "⚪"
 
 
-def diff_snapshots(before: dict, after: dict) -> dict:
-    added = sorted(after["files"] - before["files"])
-    deleted = sorted(before["files"] - after["files"])
+def run_health_check() -> None:
+    """Button callback: ask the backend, store the answer for this rerun to draw."""
+    try:
+        st.session_state.health = api_client.check_health()
+    except requests.RequestException:
+        # no answer at all: the backend itself is down, so the whole app is unhealthy
+        st.session_state.health = {"status": "unhealthy", "backend_down": True}
 
-    moved = []
-    for old in list(deleted):
-        name = old.split("/")[-1]
-        new = next((path for path in added if path.split("/")[-1] == name), None)
-        if new:
-            moved.append((old, new))
-            deleted.remove(old)
-            added.remove(new)
 
-    new_rows = len(after["tracker_ids"] - before["tracker_ids"])
-    return {"added": added, "moved": moved, "deleted": deleted, "new_rows": new_rows}
+def show_health_button() -> None:
+    health = st.session_state.health
+    status = health["status"] if health else None
+    st.button(
+        f"{render_dot(status)} API health",
+        key="health_button",
+        on_click=run_health_check,
+        width="stretch",
+        help="Checks that the OpenAI and Jev APIs are working.",
+    )
+    if status is None:
+        return
 
+    # the glow: Streamlit gives the button the CSS class st-key-<key>
+    colour = HEALTH_COLOURS[status]
+    st.html(
+        f"<style>.st-key-health_button button {{"
+        f"border-color: {colour}; box-shadow: 0 0 12px {colour};"
+        f"}}</style>"
+    )
+    if health.get("backend_down"):
+        st.caption(f"Backend not reachable at {api_client.API_BASE_URL}")
+    elif status == "unhealthy":
+        down = [name for name, key in (("OpenAI", "openai"), ("Jev", "jev")) if health[key] != "healthy"]
+        st.caption(f"Unhealthy: {', '.join(down)}")
+
+
+# --------------------------------------------------------------------------
+# Workspace view (main area)
+# --------------------------------------------------------------------------
 
 def show_kpis(tree: dict[str, list[str]]) -> None:
+    """One bordered card per folder, so a run's effect is visible at a glance."""
     for column, (folder, label, icon) in zip(st.columns(len(KPI_FOLDERS)), KPI_FOLDERS):
         with column.container(border=True):
             st.metric(f"{icon} {label}", len(tree.get(folder, [])))
 
 
 def show_last_run_changes(changes: dict | None) -> None:
+    """Summary of what the latest agent run did to the workspace."""
     if changes is None:
         return
     with st.container(border=True):
@@ -80,6 +123,7 @@ def show_last_run_changes(changes: dict | None) -> None:
             return
         st.markdown(" ".join(badges))
 
+        # tracker-only runs have no file lines, so there is nothing to expand
         if changes["moved"] or changes["added"] or changes["deleted"]:
             with st.expander("Details"):
                 for old, new in changes["moved"]:
@@ -91,19 +135,25 @@ def show_last_run_changes(changes: dict | None) -> None:
 
 
 def smaller_headings(markdown: str) -> str:
+    """Push every heading two levels down ('#' -> '###') so the file fits in the box."""
     return "\n".join(
         "##" + line if line.startswith("#") else line for line in markdown.splitlines()
     )
 
 
-def show_job_description() -> None:
+def show_job_description(has_jd: bool) -> None:
+    """Always visible: the screening criteria the agent works from."""
     with st.container(border=True):
         st.markdown("**:material/work: Job description**")
         with st.container(height=BOX_HEIGHT, border=False):
-            st.markdown(smaller_headings(workspace.read_text("job_description.md")))
+            if not has_jd:
+                st.caption("No job description yet. Upload one in the sidebar.")
+                return
+            st.markdown(smaller_headings(api_client.read_file(JD_FILE)))
 
 
 def resume_label(path: str, moved_to: set[str]) -> str:
+    """File name plus a badge for the folder it sits in (and 'moved' after a run)."""
     folder, name = path.split("/")
     label = f"{name} {RESUME_FOLDERS[folder]}".strip()
     if path in moved_to:
@@ -112,13 +162,14 @@ def resume_label(path: str, moved_to: set[str]) -> str:
 
 
 def show_resumes(tree: dict[str, list[str]], changes: dict | None) -> None:
+    """Radio list of every resume (wherever it is now), previewed beside the list."""
     resume_paths = [path for folder in RESUME_FOLDERS for path in tree.get(folder, [])]
     moved_to = {new for _, new in changes["moved"]} if changes else set()
 
     with st.container(border=True):
         st.markdown(f"**:material/description: Resumes** · {len(resume_paths)}")
         if not resume_paths:
-            st.caption("No resumes in the workspace.")
+            st.caption("No resumes yet. Upload them in the sidebar.")
             return
 
         pick, preview = st.columns([1, 2])
@@ -135,16 +186,18 @@ def show_resumes(tree: dict[str, list[str]], changes: dict | None) -> None:
             if selected is None:
                 st.caption("Select a resume to preview it.")
             else:
-                st.code(workspace.read_text(selected), language="text", wrap_lines=True)
+                st.code(api_client.read_file(selected), language="text", wrap_lines=True)
 
 
 def split_draft(text: str) -> tuple[str, str, str]:
+    """Split a saved draft ('To: ..', 'Subject: ..', blank line, body) into its parts."""
     header, _, body = text.partition("\n\n")
     fields = dict(line.split(": ", 1) for line in header.splitlines() if ": " in line)
     return fields.get("To", ""), fields.get("Subject", ""), body.strip()
 
 
 def show_drafts(draft_paths: list[str]) -> None:
+    """Radio list of the email drafts in drafts/, with the selected one shown as an email."""
     with st.container(border=True):
         st.markdown(f"**:material/mail: Email drafts** · {len(draft_paths)}")
         if not draft_paths:
@@ -158,6 +211,7 @@ def show_drafts(draft_paths: list[str]) -> None:
                 draft_paths,
                 index=None,
                 key="selected_draft",
+                # 'invite_rohan_mehta_example_com.txt' -> 'rohan_mehta_example_com'
                 format_func=lambda path: path.split("/")[-1].removeprefix("invite_").removesuffix(".txt"),
                 label_visibility="collapsed",
             )
@@ -165,7 +219,7 @@ def show_drafts(draft_paths: list[str]) -> None:
             if selected is None:
                 st.caption("Select a draft to read it.")
                 return
-            to, subject, body = split_draft(workspace.read_text(selected))
+            to, subject, body = split_draft(api_client.read_file(selected))
             st.markdown(f"**To:** {to}")
             st.markdown(f"**Subject:** {subject}")
             st.text(body)
@@ -181,6 +235,7 @@ def show_tracker(rows: list[dict]) -> None:
             pd.DataFrame(rows),
             hide_index=True,
             alt="Candidate tracker with decision and fit score for each screened resume",
+            # the outcome columns come first so they are visible without scrolling
             column_order=[
                 "candidate_id", "name", "decision", "fit_score", "years_experience",
                 "must_haves_met", "email", "nice_to_haves", "resume_file", "notes",
@@ -190,7 +245,7 @@ def show_tracker(rows: list[dict]) -> None:
                 "name": st.column_config.TextColumn("Name", pinned=True),
                 "decision": "Decision",
                 "fit_score": st.column_config.ProgressColumn(
-                    "Fit score", min_value=0, max_value=6, format="%d"
+                    "ATS score", min_value=0, max_value=100, format="%d"
                 ),
                 "years_experience": "Years",
                 "must_haves_met": "Must-haves met",
@@ -201,9 +256,42 @@ def show_tracker(rows: list[dict]) -> None:
             },
         )
 
-def reset_everything() -> None:
-    """Button callback: rebuild the workspace and forget the previous runs."""
-    workspace.reset_workspace()
+
+# --------------------------------------------------------------------------
+# Uploads and agent panel (sidebar)
+# --------------------------------------------------------------------------
+
+def save_uploads(jd_file, resume_files: list) -> None:
+    """Send the uploaded files to the backend; report what was saved and what wasn't."""
+    result = api_client.upload_files(
+        (jd_file.name, jd_file.getvalue()) if jd_file is not None else None,
+        [(file.name, file.getvalue()) for file in resume_files],
+    )
+    if result["saved"]:
+        st.toast(f"Added {len(result['saved'])} file(s) to the workspace.", icon=":material/upload_file:")
+    for message in result["errors"]:
+        st.warning(message, icon=":material/warning:")
+
+
+def show_upload_form(upload_types: list[str]) -> bool:
+    """One form for the JD and the resumes, so files are saved once, on submit.
+    Returns True if files were sent, so the caller can read the workspace again."""
+    with st.form("uploads", clear_on_submit=True, border=True):
+        jd_file = st.file_uploader("Job description", type=upload_types)
+        resume_files = st.file_uploader(
+            "Resumes", type=upload_types, accept_multiple_files=True
+        )
+        submitted = st.form_submit_button(
+            "Add to workspace", icon=":material/upload_file:", width="stretch"
+        )
+    if submitted:
+        save_uploads(jd_file, resume_files or [])
+    return submitted
+
+
+def clear_everything() -> None:
+    """Button callback: empty the workspace and forget the previous runs."""
+    api_client.clear_workspace()
     st.session_state.history = []
     st.session_state.last_changes = None
     st.session_state.selected_resume = None
@@ -211,24 +299,19 @@ def reset_everything() -> None:
 
 
 def run_task(task: str) -> dict:
-    """Run the agent on one task and record what it did to the workspace."""
-    if not workspace.WORKSPACE_DIR.exists():
-        return {"task": task, "error": "There is no workspace yet. Click Reset workspace first."}
-
-    before = take_snapshot()
+    """Send one task to the backend; it runs the agent and diffs the workspace."""
     try:
-        state = run_agent(get_agent(), task, full=True)
-    except Exception as error:  # show the failure in the panel instead of crashing the page
-        return {"task": task, "error": f"{type(error).__name__}: {error}"}
+        result = api_client.run_task(task)
+    except requests.RequestException as error:  # show the failure in the panel instead of crashing the page
+        return {"task": task, "error": f"The agent run failed: {error}"}
 
-    changes = diff_snapshots(before, take_snapshot())
-    st.session_state.last_changes = changes
+    st.session_state.last_changes = result["changes"]
     return {
         "task": task,
-        "response": state["response"],
-        "plan": state["plan"],
-        "past_steps": state["past_steps"],
-        "changes": changes,
+        "response": result["response"],
+        "plan": result["plan"],
+        "past_steps": result["past_steps"],
+        "changes": result["changes"],
     }
 
 
@@ -253,45 +336,73 @@ def show_history(entries: list[dict]) -> None:
             show_answer(entry)
 
 
+# --------------------------------------------------------------------------
+# Page
+#
+# Order matters: the workspace is drawn BEFORE the agent runs, so it is not greyed
+# out as stale while the agent works. After a run we rerun the script once so the
+# workspace is drawn again from the new files.
+# --------------------------------------------------------------------------
 
 if "history" not in st.session_state:
     st.session_state.history = []
     st.session_state.last_changes = None
+    st.session_state.health = None
 
 st.title("Hiring assistant", icon=":material/work:")
 
 with st.sidebar:
-    st.header("Agent")
+    # drawn first, so it still works when the backend is down
+    show_health_button()
+
+# one request per rerun for the tree and the tracker; everything below draws from it
+try:
+    ws = api_client.get_workspace()
+except requests.RequestException:
+    st.error(
+        f"Backend not reachable at {api_client.API_BASE_URL}. "
+        "Start it with `uv run uvicorn hiring_agent.api.main:app --reload`.",
+        icon=":material/cloud_off:",
+    )
+    st.stop()
+
+with st.sidebar:
+    # uploads are saved here, before the main area is drawn, so new files show at once
+    st.header("Files")
+    if show_upload_form(ws["upload_types"]):
+        ws = api_client.get_workspace()
     st.button(
-        "Reset workspace",
-        icon=":material/refresh:",
-        on_click=reset_everything,
+        "Clear workspace",
+        icon=":material/delete_sweep:",
+        on_click=clear_everything,
         width="stretch",
-        help="Rebuilds every file and the tracker from the seed data.",
+        help="Deletes the job description, every resume, draft and tracker row.",
     )
 
-   
+    st.header("Agent")
+    # the chat log sits above the input; it is filled at the end of the script
     chat_box = st.container()
-    task = st.chat_input("Describe a hiring task", submit_mode="disable")
-
-if workspace.WORKSPACE_DIR.exists():
-    tree = workspace.file_tree()
-    show_kpis(tree)
-    show_last_run_changes(st.session_state.last_changes)
-
-    jd_column, resumes_column = st.columns([2, 3])
-    with jd_column:
-        show_job_description()
-    with resumes_column:
-        show_resumes(tree, st.session_state.last_changes)
-
-    show_drafts(tree.get("drafts", []))
-    show_tracker(workspace.read_tracker())
-else:
-    st.info(
-        "No workspace yet. Click **Reset workspace** in the sidebar to create it.",
-        icon=":material/info:",
+    # every task starts by reading the JD, so there is nothing to do without one
+    task = st.chat_input(
+        "Describe a hiring task" if ws["has_job_description"] else "Upload a job description first",
+        submit_mode="disable",
+        disabled=not ws["has_job_description"],
     )
+
+tree = ws["tree"]
+show_kpis(tree)
+show_last_run_changes(st.session_state.last_changes)
+
+jd_column, resumes_column = st.columns([2, 3])
+with jd_column:
+    show_job_description(ws["has_job_description"])
+with resumes_column:
+    show_resumes(tree, st.session_state.last_changes)
+
+show_drafts(tree.get("drafts", []))
+show_tracker(ws["tracker"])
+
+# Slow work goes last: run the agent after everything else is on screen.
 with chat_box:
     show_history(st.session_state.history)
     if task:
