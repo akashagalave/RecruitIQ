@@ -11,8 +11,6 @@ name: CI Pipeline
 on:
   push:
     branches: [main]
-    paths:
-      - params.yaml
   # prompts live in Langfuse, so a prompt change pushes no file: run it by hand
   workflow_dispatch:
 
