@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "aws[cli]>=0.2.5",
     "dagshub>=0.7.3",
     "deepeval>=4.3.3",
     "fastapi[standard]>=0.162.0",
