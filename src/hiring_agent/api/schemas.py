@@ -1,18 +1,7 @@
-"""Request and response models for the FastAPI layer (Stage 6).
-
-FastAPI uses them to validate what comes in, to shape what goes out, and to draw the
-/docs page. They describe the HTTP contract only; the agent and workspace code don't
-import them.
-"""
 
 from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
-
-
-# --------------------------------------------------------------------------
-# Agent
-# --------------------------------------------------------------------------
 
 class TaskRequest(BaseModel):
     task: str = Field(min_length=1, description="One plain-English hiring task")
@@ -27,12 +16,7 @@ class Changes(BaseModel):
 
 
 class AgentRunResponse(BaseModel):
-    """The public part of the agent's final state, plus the workspace changes.
 
-    guardrail_message (the real reason a guard blocked), tracker_before and score_checked
-    are left out on purpose: the block reason stays in the server log so an attacker
-    can't learn which check fired, and the other two are internal bookkeeping.
-    """
     task: str
     plan: list[str]
     past_steps: list[tuple[str, str]]  # (step, result)
@@ -43,10 +27,6 @@ class AgentRunResponse(BaseModel):
     changes: Changes
 
 
-# --------------------------------------------------------------------------
-# Workspace
-# --------------------------------------------------------------------------
-
 class WorkspaceResponse(BaseModel):
     tree: dict[str, list[str]]       # folder -> file paths
     tracker: list[dict[str, str]]    # candidates.csv rows
@@ -54,7 +34,6 @@ class WorkspaceResponse(BaseModel):
     upload_types: list[str]          # file extensions the upload accepts
 
 
-# named FileContentResponse, not FileResponse, so it can't be confused with fastapi.responses.FileResponse
 class FileContentResponse(BaseModel):
     path: str
     content: str
@@ -64,10 +43,6 @@ class UploadResponse(BaseModel):
     saved: list[str]    # workspace paths of the stored files
     errors: list[str]   # "<filename>: <reason>" for each file that was refused
 
-
-# --------------------------------------------------------------------------
-# Health
-# --------------------------------------------------------------------------
 
 class HealthResponse(BaseModel):
     openai: Literal["healthy", "unhealthy"]

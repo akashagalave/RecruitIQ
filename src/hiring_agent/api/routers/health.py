@@ -1,9 +1,3 @@
-"""GET /health: are the two external APIs the agent needs (OpenAI and Jev) working?
-
-Each service gets one tiny real call. A failed call is caught and reported as
-"unhealthy" with its error; the endpoint itself never fails, so the frontend always
-gets an answer.
-"""
 
 from fastapi import APIRouter
 from langchain_openai import ChatOpenAI
@@ -16,9 +10,6 @@ from hiring_agent.api.schemas import HealthResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
 
-# The cheapest current OpenAI model: the check only needs to know the API key and the
-# service work, not how good the answer is. A short timeout and one retry keep a dead
-# service from hanging the check.
 HEALTH_CHECK_MODEL = "gpt-5.4-nano"
 health_llm = ChatOpenAI(model=HEALTH_CHECK_MODEL, timeout=30, max_retries=1)
 

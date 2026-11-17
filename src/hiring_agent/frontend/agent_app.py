@@ -1,13 +1,4 @@
-"""Streamlit frontend: the workspace view plus the agent panel.
 
-Stage 6: the app no longer imports the agent. Every workspace read, upload, clear and
-agent run is an HTTP request to the FastAPI backend (api_client.py). The backend works
-on workspace_app/; the seeded workspace/ is left to the CLI and the evals.
-
-Run from the repo root, in two terminals:
-    uv run uvicorn hiring_agent.api.main:app --reload
-    uv run streamlit run src/hiring_agent/frontend/agent_app.py
-"""
 
 import pandas as pd
 import requests
@@ -43,11 +34,6 @@ RESUME_FOLDERS = {
 
 # Glow colours of the health button once it has been clicked (white until then)
 HEALTH_COLOURS = {"healthy": "#21c354", "unhealthy": "#ff4b4b"}
-
-
-# --------------------------------------------------------------------------
-# API health (sidebar): one button for both OpenAI and Jev
-# --------------------------------------------------------------------------
 
 def render_dot(status: str | None) -> str:
     """Same dots as the RAG app: white before the first check, then green or red."""
@@ -94,9 +80,6 @@ def show_health_button() -> None:
         st.caption(f"Unhealthy: {', '.join(down)}")
 
 
-# --------------------------------------------------------------------------
-# Workspace view (main area)
-# --------------------------------------------------------------------------
 
 def show_kpis(tree: dict[str, list[str]]) -> None:
     """One bordered card per folder, so a run's effect is visible at a glance."""
@@ -257,9 +240,6 @@ def show_tracker(rows: list[dict]) -> None:
         )
 
 
-# --------------------------------------------------------------------------
-# Uploads and agent panel (sidebar)
-# --------------------------------------------------------------------------
 
 def save_uploads(jd_file, resume_files: list) -> None:
     """Send the uploaded files to the backend; report what was saved and what wasn't."""
@@ -336,13 +316,6 @@ def show_history(entries: list[dict]) -> None:
             show_answer(entry)
 
 
-# --------------------------------------------------------------------------
-# Page
-#
-# Order matters: the workspace is drawn BEFORE the agent runs, so it is not greyed
-# out as stale while the agent works. After a run we rerun the script once so the
-# workspace is drawn again from the new files.
-# --------------------------------------------------------------------------
 
 if "history" not in st.session_state:
     st.session_state.history = []

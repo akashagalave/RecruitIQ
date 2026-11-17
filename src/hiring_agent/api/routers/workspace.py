@@ -1,10 +1,4 @@
-"""Workspace endpoints: what the frontend shows and the files the user uploads.
 
-Each endpoint is a thin wrapper over hiring_agent/app/workspace.py, the same service
-layer the agent's tools use. Its functions are called as `workspace.<name>` (never
-imported by name) because they read the module-level WORKSPACE_DIR, which main.py
-points at workspace_app/.
-"""
 
 from typing import Annotated
 

@@ -1,8 +1,3 @@
-"""POST /agent/run: run the agent on one task and return its final state.
-
-The same build_agent / run_agent the CLI and the evals use. The before/after workspace
-diff that the Stage 1 frontend computed now happens here, so the frontend only shows it.
-"""
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -14,14 +9,7 @@ from hiring_agent.api.schemas import AgentRunResponse, Changes, TaskRequest
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
-# compiled once when the server starts, reused for every request (single-turn: no
-# checkpointer, so nothing is carried from one task to the next)
 agent = build_agent()
-
-
-# --------------------------------------------------------------------------
-# What changed in the workspace during a run (moved here from the Stage 1 frontend)
-# --------------------------------------------------------------------------
 
 def take_snapshot() -> dict:
     """Every file path and every tracker id, taken before and after a run."""
@@ -51,8 +39,7 @@ def diff_snapshots(before: dict, after: dict) -> Changes:
 
 @router.post("/run", response_model=AgentRunResponse)
 def run(request: TaskRequest) -> AgentRunResponse:
-    # A plain `def`, so FastAPI runs it in a worker thread: a 1-2 minute run does not
-    # block other requests such as /health or /workspace.
+
     before = take_snapshot()
     try:
         state = run_agent(agent, request.task, full=True)
@@ -62,7 +49,4 @@ def run(request: TaskRequest) -> AgentRunResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to run the agent.",
         ) from error
-
-    # AgentRunResponse declares only the public keys, so guardrail_message (already in
-    # the server log), tracker_before and score_checked are dropped here
     return AgentRunResponse(**state, changes=diff_snapshots(before, take_snapshot()))

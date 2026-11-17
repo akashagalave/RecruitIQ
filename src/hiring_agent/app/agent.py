@@ -29,9 +29,6 @@ EXECUTOR_INPUT = PromptTemplate.from_template("COMPLETED STEPS:\n{completed}\n\n
 RESPONDER_INPUT = PromptTemplate.from_template("TASK:\n{task}\n\nSTEP RESULTS:\n{results}")
 
 
-# --------------------------------------------------------------------------
-# State
-# --------------------------------------------------------------------------
 
 class Plan(BaseModel):
     steps: list[str] = Field(description="Ordered, concrete steps to complete the task")
@@ -45,16 +42,8 @@ class PlanExecuteState(TypedDict):
     response: str
 
 
-# --------------------------------------------------------------------------
-# Graph
-# --------------------------------------------------------------------------
-
 def build_agent(llm=None, planner_llm=None):
-    """Compile and return the plan-and-execute graph.
 
-    The prompts are fetched from Langfuse here, so a new "latest" version is picked up
-    the next time an agent is built (Langfuse's SDK also caches prompts for ~60 seconds).
-    """
     llm = llm or default_llm
     planner_llm = planner_llm or default_planner_llm
 
