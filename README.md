@@ -403,4 +403,4 @@ and draft an interview invite for each shortlisted candidate who has an email
 ## 👨‍💻 Author
 
 **Akash Agalave**
-- GitHub: [@akashagalave](https://github.com/akashagalaveaaa1)
+- GitHub: [@akashagalave](https://github.com/akashagalave)
